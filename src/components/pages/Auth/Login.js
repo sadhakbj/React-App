@@ -1,37 +1,46 @@
-import Axios               from "axios"
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
+import {
+    useDispatch,
+    useSelector,
+} from "react-redux"
 import { Link }            from "react-router-dom"
+import { attemptLogin }     from "../../../store/auth/actions"
 
 const Login = (props) => {
+    console.log(props)
     const [credentials, setCredentials] = useState({
         email: "",
         password: "",
     })
     const [loading, setLoading] = useState(false)
     const [formErrors, setFormErrors] = useState({})
+    const dispatch = useDispatch()
+    const isLoggedIn = useSelector(state => state.auth.isLoggedIn)
+
+    useEffect(() => {
+        if (isLoggedIn) {
+            props.history.push('/home')
+        }
+    }, [isLoggedIn])
 
     const handleChange = e => {
         e.persist()
         setCredentials(credentials => ({ ...credentials, [e.target.name]: e.target.value }))
     }
 
+    const handleOnSuccess = () => {
+        setLoading(false)
+        props.history.push("/register")
+    }
+
     const handleLogin = async (e) => {
         e.preventDefault()
         setLoading(true)
-        const url = "http://localhost:5000/api/auth/login"
-        try {
-            const response = await Axios.post(url, credentials)
-            const { data } = response.data
-            localStorage.setItem("user", JSON.stringify(data.user))
-            localStorage.setItem("token", data.token)
-            props.history.push("/register")
-
-        } catch (e) {
-            if (e.response.status === 422) {
-                setFormErrors(e.response.data.errors)
-            }
+        setFormErrors({})
+        dispatch(attemptLogin(credentials, handleOnSuccess, (errors) => {
             setLoading(false)
-        }
+            setFormErrors(errors)
+        }))
     }
 
     return (
